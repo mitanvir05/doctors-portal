@@ -1,54 +1,78 @@
-import React, { useEffect } from "react";
+import React from "react";
 import auth from "../../firebase.init";
 import {
-  useSignInWithEmailAndPassword,
+  useCreateUserWithEmailAndPassword,
   useSignInWithGoogle,
+  useUpdateProfile,
 } from "react-firebase-hooks/auth";
 import { useForm } from "react-hook-form";
 import Loading from "../Shared/Loading";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
-const Login = () => {
+const SignUp = () => {
   const [signInWithGoogle, gUser, gLoading, gError] = useSignInWithGoogle(auth);
-  const [signInWithEmailAndPassword, user, loading, error] =
-    useSignInWithEmailAndPassword(auth);
+  const [createUserWithEmailAndPassword, user, loading, error] =
+    useCreateUserWithEmailAndPassword(auth);
+  const [updateProfile, updating, updateError] = useUpdateProfile(auth);
+
+  const navigate = useNavigate();
+
   let signInError;
-
-  let navigate = useNavigate();
-  let location = useLocation();
-  let from = location.state?.from?.pathname || "/";
-
-  useEffect(() => {
-    if (user || gUser) {
-      navigate(from, { replace: true });
-    }
-  }, [user, gUser, from, navigate]);
 
   const {
     register,
     formState: { errors },
     handleSubmit,
   } = useForm();
-  if (gLoading || loading) {
+  if (gLoading || loading || updating) {
     return <Loading></Loading>;
   }
-  if (error || gError) {
+  if (error || gError || updateError) {
     signInError = (
       <small className="text-red-700">
-        {error?.message || gError?.message}
+        {error?.message || gError?.message || updateError?.message}
       </small>
     );
   }
-
-  const onSubmit = (data) => {
-    signInWithEmailAndPassword(data.email, data.password);
+  if (user || gUser) {
+    console.log(user || gUser);
+  }
+  const onSubmit = async (data) => {
+    console.log(data);
+    await createUserWithEmailAndPassword(data.email, data.password);
+    await updateProfile({ displayName: data.name });
+    console.log("Update Done");
+    navigate("/appointment");
   };
   return (
     <div className="flex h-screen justify-center items-center">
       <div className="card w-96 bg-base-100 shadow-xl">
         <div className="card-body">
-          <h2 className="text-center text-xl">Login</h2>
+          <h2 className="text-center text-xl">SignUp</h2>
           <form onSubmit={handleSubmit(onSubmit)}>
+            <div className="form-control w-full max-w-xs">
+              <label className="label">
+                <span className="label-text">Name</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Enter Your Name"
+                className="input input-bordered w-full max-w-xs"
+                {...register("name", {
+                  required: {
+                    value: true,
+                    message: "Name is required",
+                  },
+                })}
+              />
+              <label className="label">
+                {errors.name?.type === "required" && (
+                  <span className="label-text-alt text-red-700">
+                    {errors.name.message}
+                  </span>
+                )}
+              </label>
+            </div>
             <div className="form-control w-full max-w-xs">
               <label className="label">
                 <span className="label-text">Email</span>
@@ -117,13 +141,13 @@ const Login = () => {
             <input
               className="btn w-full max-w-xs"
               type="submit"
-              value="Login"
+              value="SignUp"
             />
           </form>
           <p>
-            New to doctors portal ?{" "}
-            <Link className="text-primary" to="/signup">
-              Create New Account
+            Already have an Account ?{" "}
+            <Link className="text-primary" to="/login">
+              Please Login
             </Link>
           </p>
           <div className="divider">OR</div>
@@ -139,4 +163,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default SignUp;
